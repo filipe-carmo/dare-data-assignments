@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pylint", "pytest-cov", "toml"]
+dev = ["pytest", "pylint", "pytest-cov", "toml", "setuptools"]
 
 [tool.setuptools]
 packages = ["life_expectancy"]
