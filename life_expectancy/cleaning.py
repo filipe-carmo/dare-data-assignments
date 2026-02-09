@@ -30,12 +30,30 @@ def clean_data():
         value_name='value'
     )
 
-    print("✅ Melted to long format!")
-    print(f"Shape: {df_long.shape}")
-    print("\n=== SAMPLE ===")
-    print(df_long.head(3))
+    # 4. Clean data types and filter Portugal
+    # Convert year to int (extract digits)
+    df_long['year'] = df_long['year'].str.extract('(\d+)').astype(int)
     
-    return df_long
+    # Convert value to float (remove :, b, e, spaces)
+    df_long['value'] = (df_long['value']
+                       .astype(str)
+                       .str.replace(r'[^\d.]', '', regex=True)
+                       .replace('', float('nan'))
+                       .astype(float))
+    
+    # Remove NaN values and filter PT
+    df_clean = df_long[
+        (df_long['region'] == 'PT') & 
+        (df_long['value'].notna())
+    ].reset_index(drop=True)
+
+    print("✅ Types cleaned and filtered to PT!")
+    print(f"Final shape: {df_clean.shape}")
+    print("\n=== FINAL PT DATA ===")
+    print(df_clean.head(3))
+    
+    return df_clean
+
 
 
 if __name__ == "__main__":
