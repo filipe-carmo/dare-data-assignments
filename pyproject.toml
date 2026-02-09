@@ -12,7 +12,7 @@ authors = [
     {name = "Filipe Carmo <filipe.brandao.carmo@gmail.com>"}
 ]
 dependencies = [
-    "pandas"
+    "pandas", "polars"
 ]
 
 [project.optional-dependencies]
