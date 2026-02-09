@@ -35,3 +35,6 @@ disable = [
     "missing-class-docstring",
     "missing-function-docstring" 
 ]
+
+[tool.pylint."format"]
+max-line-length = 110
