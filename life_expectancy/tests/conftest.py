@@ -8,13 +8,7 @@ from . import FIXTURES_DIR
 @pytest.fixture()
 def eu_life_expectancy_raw() -> pd.DataFrame:
     """Fixture to load the raw input sample data"""
-    return pd.read_csv(FIXTURES_DIR / "eu_life_expectancy_raw.tsv", sep="\t")
-
-
-@pytest.fixture()
-def eu_life_expectancy_expected() -> pd.DataFrame:
-    """Fixture to load the expected output for all EU countries"""
-    return pd.read_csv(FIXTURES_DIR / "eu_life_expectancy_expected.csv")
+    return pd.read_csv(FIXTURES_DIR / "eu_life_expectancy_raw.tsv", sep="\t").copy()
 
 
 @pytest.fixture()
