@@ -1,43 +1,89 @@
-# Foundations Learning Path Assignments
+# Life Expectancy Data Pipeline
 
-## Introduction
+[![Python application](https://github.com/filipecarmo/dare-data-assignments/actions/workflows/python-app.yml/badge.svg)](https://github.com/filipecarmo/dare-data-assignments/actions/workflows/python-app.yml)
 
-We are going to be using this project throughout the course.
+A robust Python-based data engineering pipeline designed to clean and transform European life expectancy data from Eurostat. This project demonstrates clean code principles, design patterns (Strategy & Factory), comprehensive testing, and automated CI/CD workflows.
 
-This assignment uses life expectancy in Europe grouped by Country (or other, like group of countries), Age, Sex, and Time. But the data format makes it hard to use. We will be building a pipeline do clean the data, while applying the concepts you've learned in the previous modules.
+## 🚀 Overview
 
-## Installing
+The goal of this project is to process raw life expectancy data which arrives in various formats (TSV, JSON, ZIP) and transform it into a standardized, clean CSV format for downstream analysis. 
 
-Before installing, make sure your `pip` is up to date.
+### Key Features:
+- **Strategy Pattern:** Decouples data loading and cleaning logic for different file formats (TSV and JSON/ZIP).
+- **Factory Pattern:** Dynamically selects the appropriate processing strategy based on the input file type.
+- **Type Safety:** Utilizes Python type hints and Enums for regions and strategies.
+- **Automated Testing:** High test coverage using `pytest` and `pytest-cov`.
+- **Code Quality:** Enforced through `pylint` and GitHub Actions CI/CD.
+
+## 🛠️ Technologies Used
+
+- **Language:** Python 3.10+
+- **Data Processing:** Pandas, Polars
+- **Testing:** Pytest, Pytest-cov
+- **Linting:** Pylint
+- **CI/CD:** GitHub Actions
+
+## 📥 Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/filipecarmo/dare-data-assignments.git
+   cd dare-data-assignments
+   ```
+
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. Install the package in editable mode with development dependencies:
+   ```bash
+   pip install -e .[dev]
+   ```
+
+## 📖 Usage
+
+The main entry point for the pipeline is `life_expectancy/cleaning.py`. You can run it directly or import the `main` function.
 
 ```bash
-pip --version
+python -m life_expectancy.cleaning
 ```
 
-Prior to the introduction of `pyproject.toml`-based builds (in PEP 517 and PEP 518), pip had only supported installing packages using setup.py files that were built using `setuptools`. But in version 21.3, pip added support for performing editable installs of packages that use `pyproject.toml`. This means that you can use pip to install packages described in the `pyproject.toml`.
+By default, it processes the Portuguese (PT) data from the default raw data source. You can customize the behavior by modifying the parameters in `main()`.
 
-To update pip, run:
+## 🧪 Testing & Quality Control
 
+To ensure the integrity of the data pipeline, I've implemented a suite of unit and integration tests.
+
+### Run Tests
 ```bash
-pip install --upgrade pip
+pytest --cov=life_expectancy life_expectancy/tests/
 ```
 
-Now you're ready to go!
+### Run Linter
+```bash
+pylint life_expectancy
+```
 
-1. Clone this repo.
-2. Copy `assignments` folder into a separate project `mv -r nos-lp-foundations/assignments assignments`.
-3. Move into the assignments folder (`cd assignments`) and start a new repo (`git init`).
-4. Create a virtual environment with `python -m venv .venv`.
-   > **Note for Anaconda users**: We would prefer if you exit the automatic conda environments and tried using the steps above, as they are the canonical Python way of creating virtual environments. However, we realize working that way might be tricky for Anaconda users since Anaconda usually changes the configurations of your machine. If you are having too many problems getting started, then feel free to use the "conda way" of handling environments.  I.e.: create a virtual environment with `conda create --name foundations`.
-5. Activate the virtual environment with `source .venv/bin/activate` or `.venv\Scripts\activate` on Windows.
-   > **Note for Anaconda users**: Same as above, if you are having too many problems getting started, then feel free to activate the environment with `conda activate foundations` instead.
+## 📂 Project Structure
 
-Don't install the project yet. We will do that in [setup assignment](./assignment_0/README.md).
+```text
+.
+├── .github/workflows/    # CI/CD configuration
+├── course_materials/     # Original assignment instructions and materials
+├── life_expectancy/      # Main package
+│   ├── data/             # Raw and processed data (ignored by git)
+│   ├── tests/            # Unit and integration tests
+│   └── cleaning.py       # Core pipeline logic (Strategy/Factory patterns)
+├── pyproject.toml        # Project metadata and dependencies
+└── README.md             # This file
+```
 
-## Using this project
+## 📝 Attribution
 
-Open the `README.md` file inside each assignment and follow the instructions.
+This project was developed by **Filipe Carmo** as part of the **Foundations Learning Path** (lp-foundations) course. The initial project structure and problem statement were proposed by **DareData Engineering**.
 
-> Note: Remember that all commands inside the Readme files assume you are in the root of the project.
+## 📄 License
 
-You can now start working on the [setup assignment](./assignment_0/README.md). Good luck! 🚀
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.

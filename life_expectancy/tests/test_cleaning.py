@@ -1,8 +1,8 @@
 """Tests for the cleaning module"""
 
-import pandas as pd
 from unittest.mock import patch
 from pathlib import Path
+import pandas as pd
 
 from life_expectancy.cleaning import (
     Region,
@@ -103,7 +103,7 @@ def test_data_strategy_factory():
     assert isinstance(json_strategy, JSONStrategy)
 
 
-def test_json_strategy_clean_data(pt_life_expectancy_expected):
+def test_json_strategy_clean_data():
     """Test that the JSONStrategy cleans data into the expected standard format"""
     # 1. Create a dummy "raw" JSON DataFrame that mimics the Eurostat structure
     raw_json_data = pd.DataFrame(
