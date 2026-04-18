@@ -98,7 +98,7 @@ def test_data_strategy_factory():
 
     # 2. Test JSON extension
     json_strategy = DataStrategyFactory.get_strategy(
-        Path("data/raw/eurostat_life_expect.json.zip")
+        Path("data/raw/eurostat_life_expect.zip")
     )
     assert isinstance(json_strategy, JSONStrategy)
 

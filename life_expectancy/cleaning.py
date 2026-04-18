@@ -215,7 +215,7 @@ def save_data(df: pd.DataFrame, output_path: Path) -> None:
 
 
 def main(
-    country: Region = Region.PT, file_name: str = "eurostat_life_expect.json.zip"
+    country: Region = Region.PT, file_name: str = "eurostat_life_expect.zip"
 ) -> pd.DataFrame:
     """
     Main pipeline: load, clean, and save life expectancy data.
