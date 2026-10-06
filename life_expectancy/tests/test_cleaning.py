@@ -2,7 +2,9 @@
 
 from unittest.mock import patch
 from pathlib import Path
+
 import pandas as pd
+import pytest
 
 from life_expectancy.cleaning import (
     Region,
@@ -11,6 +13,8 @@ from life_expectancy.cleaning import (
     DataStrategyFactory,
     save_data,
     main,
+    parse_args,
+    cli,
 )
 
 from . import FIXTURES_DIR
@@ -131,3 +135,32 @@ def test_json_strategy_clean_data():
     assert cleaned_df.iloc[0]["region"] == "PT"
     assert cleaned_df.iloc[0]["value"] == 21.7
     assert cleaned_df.iloc[0]["year"] == 2021  # Ensure year is an int
+
+
+def test_data_strategy_factory_rejects_unknown_format():
+    """Unsupported extensions raise a clear error instead of failing later"""
+    with pytest.raises(ValueError, match="Unsupported file format"):
+        DataStrategyFactory.get_strategy(Path("data/raw/life_expectancy.xlsx"))
+
+
+def test_tsv_strategy_filters_other_countries(eu_life_expectancy_raw):
+    """Cleaning for another region only returns that region's rows"""
+    cleaned = TSVStrategy().clean_data(eu_life_expectancy_raw, country=Region.ES)
+    assert not cleaned.empty
+    assert set(cleaned["region"]) == {"ES"}
+    assert cleaned["value"].notna().all()
+
+
+def test_parse_args_reads_country_and_file():
+    """The CLI maps a region code onto the Region enum"""
+    args = parse_args(["--country", "ES", "--file", "raw.tsv"])
+    assert args.country is Region.ES
+    assert args.file == "raw.tsv"
+
+
+def test_cli_runs_pipeline(pt_life_expectancy_expected, capsys):
+    """The CLI forwards its arguments to main and reports the row count"""
+    with patch("life_expectancy.cleaning.main", return_value=pt_life_expectancy_expected) as mock_main:
+        cli(["--country", "PT", "--file", "raw.tsv"])
+    mock_main.assert_called_once_with(country=Region.PT, file_name="raw.tsv")
+    assert f"Saved {len(pt_life_expectancy_expected)} rows for PT" in capsys.readouterr().out

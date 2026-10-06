@@ -1,89 +1,94 @@
 # Life Expectancy Data Pipeline
 
-[![Python application](https://github.com/filipecarmo/dare-data-assignments/actions/workflows/python-app.yml/badge.svg)](https://github.com/filipecarmo/dare-data-assignments/actions/workflows/python-app.yml)
+[![CI](https://github.com/filipe-carmo/dare-data-assignments/actions/workflows/python-app.yml/badge.svg)](https://github.com/filipe-carmo/dare-data-assignments/actions/workflows/python-app.yml)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
+![pylint](https://img.shields.io/badge/pylint-10.00-brightgreen)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
 
-A robust Python-based data engineering pipeline designed to clean and transform European life expectancy data from Eurostat. This project demonstrates clean code principles, design patterns (Strategy & Factory), comprehensive testing, and automated CI/CD workflows.
+A small, fully tested Python pipeline that turns raw Eurostat life expectancy exports (wide TSV, or JSON inside a ZIP) into a tidy, per-country CSV. It is a deliberately compact example of how I structure data code: a clear extension point for new input formats, typed interfaces, tests on fixtures, and CI that lints and tests on every push.
 
-## 🚀 Overview
+## What it does
 
-The goal of this project is to process raw life expectancy data which arrives in various formats (TSV, JSON, ZIP) and transform it into a standardized, clean CSV format for downstream analysis. 
+The raw TSV packs four dimensions into its first column and one column per year:
 
-### Key Features:
-- **Strategy Pattern:** Decouples data loading and cleaning logic for different file formats (TSV and JSON/ZIP).
-- **Factory Pattern:** Dynamically selects the appropriate processing strategy based on the input file type.
-- **Type Safety:** Utilizes Python type hints and Enums for regions and strategies.
-- **Automated Testing:** High test coverage using `pytest` and `pytest-cov`.
-- **Code Quality:** Enforced through `pylint` and GitHub Actions CI/CD.
-
-## 🛠️ Technologies Used
-
-- **Language:** Python 3.10+
-- **Data Processing:** Pandas, Polars
-- **Testing:** Pytest, Pytest-cov
-- **Linting:** Pylint
-- **CI/CD:** GitHub Actions
-
-## 📥 Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/filipecarmo/dare-data-assignments.git
-   cd dare-data-assignments
-   ```
-
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-
-3. Install the package in editable mode with development dependencies:
-   ```bash
-   pip install -e .[dev]
-   ```
-
-## 📖 Usage
-
-The main entry point for the pipeline is `life_expectancy/cleaning.py`. You can run it directly or import the `main` function.
-
-```bash
-python -m life_expectancy.cleaning
+```text
+unit,sex,age,geo\time   2021   2020   2019 ...
+YR,F,Y1,PT              :      83.3   84.0 ...
 ```
 
-By default, it processes the Portuguese (PT) data from the default raw data source. You can customize the behavior by modifying the parameters in `main()`.
+The pipeline splits the metadata, reshapes to long format, strips Eurostat flags (`b`, `e`, `p`) from the values, drops missing values (`:`), and keeps one country:
 
-## 🧪 Testing & Quality Control
-
-To ensure the integrity of the data pipeline, I've implemented a suite of unit and integration tests.
-
-### Run Tests
-```bash
-pytest --cov=life_expectancy life_expectancy/tests/
+```text
+unit,sex,age,region,year,value
+YR,F,Y1,PT,2020,83.3
+YR,F,Y1,PT,2019,84.0
 ```
 
-### Run Linter
-```bash
-pylint life_expectancy
+## Design
+
+```mermaid
+flowchart LR
+    F[raw file] --> Factory[DataStrategyFactory]
+    Factory -->|.tsv| TSV[TSVStrategy]
+    Factory -->|.json / .zip| JSON[JSONStrategy]
+    TSV --> Clean[load_data → clean_data]
+    JSON --> Clean
+    Clean --> CSV[data/processed/&lt;country&gt;_life_expectancy.csv]
 ```
 
-## 📂 Project Structure
+- **Strategy pattern.** Each input format implements the `FileStrategy` protocol (`load_data`, `clean_data`), and every strategy emits the same output schema.
+- **Factory.** `DataStrategyFactory` picks the strategy from the file extension and fails fast on unsupported formats. Supporting a new format means adding one class.
+- **Typed regions.** Countries and aggregates are a `Region` enum, so an invalid country code is caught at the CLI instead of producing an empty file. `Region.actual_countries()` filters out aggregates such as `EU27_2020`.
+
+## Quick start
+
+```bash
+git clone https://github.com/filipe-carmo/dare-data-assignments.git
+cd dare-data-assignments
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+Put a raw Eurostat export in `life_expectancy/data/raw/` (the data folder is git-ignored), then run:
+
+```bash
+life-expectancy --country PT --file eu_life_expectancy_raw.tsv
+# Saved 3050 rows for PT  →  life_expectancy/data/processed/pt_life_expectancy.csv
+```
+
+`python -m life_expectancy.cleaning` works too. From Python:
+
+```python
+from life_expectancy.cleaning import Region, main
+
+df = main(country=Region.ES, file_name="eurostat_life_expect.zip")
+```
+
+## Tests and quality
+
+```bash
+pytest --cov=life_expectancy life_expectancy/tests/   # 13 tests, ~99% coverage
+pylint life_expectancy                                 # 10.00/10
+```
+
+GitHub Actions runs both on Python 3.11, 3.12 and 3.13 for every push and pull request.
+
+## Project structure
 
 ```text
 .
-├── .github/workflows/    # CI/CD configuration
-├── course_materials/     # Original assignment instructions and materials
-├── life_expectancy/      # Main package
-│   ├── data/             # Raw and processed data (ignored by git)
-│   ├── tests/            # Unit and integration tests
-│   └── cleaning.py       # Core pipeline logic (Strategy/Factory patterns)
-├── pyproject.toml        # Project metadata and dependencies
-└── README.md             # This file
+├── .github/workflows/     # CI: pylint + pytest on a Python version matrix
+├── docs/course_materials/ # Original assignment briefs from the course
+├── life_expectancy/
+│   ├── cleaning.py        # Strategies, factory, pipeline and CLI
+│   └── tests/             # Unit tests and fixture data
+└── pyproject.toml         # Packaging, dependencies, lint and coverage config
 ```
 
-## 📝 Attribution
+## Background
 
-This project was developed by **Filipe Carmo** as part of the **Foundations Learning Path** (lp-foundations) course. The initial project structure and problem statement were proposed by **DareData Engineering**.
+Built by **Filipe Carmo** during the DareData Engineering *Foundations Learning Path*. DareData provided the problem statement and the initial project skeleton (the original briefs are in [`docs/course_materials`](docs/course_materials)); the pipeline, refactors and tests are my own work.
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+MIT, see [LICENSE.md](LICENSE.md).
