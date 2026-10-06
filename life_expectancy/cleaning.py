@@ -1,7 +1,18 @@
-﻿from enum import Enum
+"""Clean Eurostat life expectancy data into a tidy, per-country CSV.
+
+The pipeline picks a loading/cleaning strategy from the input file type
+(Strategy + Factory patterns), so new formats only need a new strategy class.
+"""
+
+import argparse
+from enum import Enum
 from pathlib import Path
 from typing import Protocol
+
 import pandas as pd
+
+DATA_DIR = Path(__file__).resolve().parent / "data"
+DEFAULT_RAW_FILE = "eurostat_life_expect.zip"
 
 
 class Region(Enum):
@@ -116,7 +127,7 @@ class TSVStrategy:
 
         Args:
             raw_df: Raw DataFrame from TSV file
-            country: Region to filter (default: "PT")
+            country: Region to filter (default: Region.PT)
 
         Returns:
             Cleaned DataFrame for specified country
@@ -125,15 +136,14 @@ class TSVStrategy:
 
         # Split first column into metadata fields
         first_col = df.columns[0]
-        df[["unit", "sex", "age", "region"]] = df[first_col].str.split(",", expand=True)
+        df[ID_COLS] = df[first_col].str.split(",", expand=True)
         df = df.drop(columns=[first_col])
 
         # Reshape to long format
-        id_cols = ID_COLS  # ← Usa constante
-        value_cols = [col for col in df.columns if col not in id_cols]
+        value_cols = [col for col in df.columns if col not in ID_COLS]
 
         long_df = df.melt(
-            id_vars=id_cols, value_vars=value_cols, var_name="year", value_name="value"
+            id_vars=ID_COLS, value_vars=value_cols, var_name="year", value_name="value"
         )
 
         # Parse year and value columns
@@ -157,7 +167,6 @@ class TSVStrategy:
 class JSONStrategy:
     def load_data(self, file_path: Path) -> pd.DataFrame:
         """Reads a JSON file from a ZIP archive."""
-        # Pandas can automatically decompress a zip file if you tell it the compression type!
         return pd.read_json(file_path, compression="zip")
 
     def clean_data(
@@ -166,19 +175,13 @@ class JSONStrategy:
         """Cleans the JSON dataframe to match the expected standard format."""
         df = raw_df.copy()
 
-        # 1. Rename columns to match the standard expected by the tests/TSV
+        # Align column names with the TSV output schema
         df = df.rename(columns={"country": "region", "lifeexpectancy": "value"})
 
-        # 2. Filter for the specific country and drop rows where value is missing
-        # (Assuming 'value' is already numeric in the JSON, but we can coerce just in case)
         df["value"] = pd.to_numeric(df["value"], errors="coerce")
-        clean_df = df[(df["region"] == country.value) & df["value"].notna()]
+        mask = (df["region"] == country.value) & df["value"].notna()
+        clean_df = df.loc[mask, ID_COLS + ["year", "value"]].copy()
 
-        # 3. Ensure we only keep the standard ID_COLS + year + value
-        cols_to_keep = ID_COLS + ["year", "value"]
-        clean_df = clean_df[cols_to_keep]
-
-        # 4. Ensure year is an integer (and strip out anything else just in case)
         clean_df["year"] = (
             clean_df["year"].astype(str).str.extract(r"(\d+)").astype(int)
         )
@@ -193,12 +196,8 @@ class DataStrategyFactory:
         path_str = str(file_path).lower()
         if path_str.endswith(".tsv"):
             return TSVStrategy()
-
-        # Changed elif to if
-        if path_str.endswith(".json") or path_str.endswith(".zip"):
+        if path_str.endswith((".json", ".zip")):
             return JSONStrategy()
-
-        # Removed else entirely (if it didn't return above, it hits this raise)
         raise ValueError(f"Unsupported file format: {file_path}")
 
 
@@ -215,30 +214,53 @@ def save_data(df: pd.DataFrame, output_path: Path) -> None:
 
 
 def main(
-    country: Region = Region.PT, file_name: str = "eurostat_life_expect.zip"
+    country: Region = Region.PT, file_name: str = DEFAULT_RAW_FILE
 ) -> pd.DataFrame:
     """
-    Main pipeline: load, clean, and save life expectancy data.
-    Now supports multiple file formats.
+    Run the pipeline: load, clean and save life expectancy data for one country.
+
+    Args:
+        country: Region to keep in the output
+        file_name: Raw file inside ``life_expectancy/data/raw`` (.tsv, .json or .zip)
+
+    Returns:
+        The cleaned DataFrame (also written to ``data/processed``)
     """
-    data_path = Path(__file__).resolve().parent / "data"
-    raw_path = data_path / "raw" / file_name  # Now uses the variable file name
-    output_path = (
-        data_path / "processed" / f"{country.value.lower()}_life_expectancy.csv"
-    )
+    raw_path = DATA_DIR / "raw" / file_name
+    output_path = DATA_DIR / "processed" / f"{country.value.lower()}_life_expectancy.csv"
 
-    # 1. Ask the factory for the right strategy
     strategy = DataStrategyFactory.get_strategy(raw_path)
-
-    # 2. Use the strategy to load and clean
     raw_data = strategy.load_data(raw_path)
     cleaned_data = strategy.clean_data(raw_data, country=country)
-
-    # 3. Save as normal
     save_data(cleaned_data, output_path)
 
     return cleaned_data
 
 
-if __name__ == "__main__":
-    main()
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--country",
+        type=Region,
+        default=Region.PT,
+        choices=list(Region),
+        metavar="CODE",
+        help="Eurostat region code to keep, e.g. PT, ES, DE (default: PT)",
+    )
+    parser.add_argument(
+        "--file",
+        default=DEFAULT_RAW_FILE,
+        help=f"raw file name inside life_expectancy/data/raw (default: {DEFAULT_RAW_FILE})",
+    )
+    return parser.parse_args(argv)
+
+
+def cli(argv: list[str] | None = None) -> None:
+    """Command-line entry point (installed as ``life-expectancy``)."""
+    args = parse_args(argv)
+    cleaned = main(country=args.country, file_name=args.file)
+    print(f"Saved {len(cleaned)} rows for {args.country.value}")
+
+
+if __name__ == "__main__":  # pragma: no cover
+    cli()

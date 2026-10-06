@@ -6,17 +6,21 @@ build-backend = "setuptools.build_meta"
 name = "life_expectancy"
 version = "0.1.0"
 readme = "README.md"
-requires-python = ">=3.8"
-description = "First assignment of the Foundations Learning Path"
+requires-python = ">=3.11"
+description = "Cleaning pipeline for Eurostat life expectancy data (Strategy + Factory patterns)"
+license = {file = "LICENSE.md"}
 authors = [
-    {name = "Filipe Carmo <filipe.brandao.carmo@gmail.com>"}
+    {name = "Filipe Carmo", email = "filipe.brandao.carmo@gmail.com"}
 ]
 dependencies = [
-    "pandas", "polars"
+    "pandas>=2.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pylint", "pytest-cov", "toml", "setuptools"]
+dev = ["pytest", "pylint", "pytest-cov"]
+
+[project.scripts]
+life-expectancy = "life_expectancy.cleaning:cli"
 
 [tool.setuptools]
 packages = ["life_expectancy"]
